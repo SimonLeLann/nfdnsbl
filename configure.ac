@@ -4,6 +4,17 @@ AM_INIT_AUTOMAKE([1.10 no-define])
 AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC
 AC_HEADER_STDC
+
+AC_CHECK_HEADERS(netinet/in.h)
+
+AC_CHECK_HEADER(linux/netfilter.h,[],[],[[#include <netinet/in.h>]])
+
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.4],,
+	AC_MSG_ERROR([libconfig 1.4 or newer not found.])
+)
+AC_SUBST(LIBCONFIG_CFLAGS)
+AC_SUBST(LIBCONFIG_LIBS)
+
 AC_CONFIG_FILES([Makefile])
 AC_DEFINE_UNQUOTED(CONFFILE, "$sysconfdir/nfdnsbl.conf", [Config file path])
 AC_OUTPUT
