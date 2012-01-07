@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <linux/netfilter.h>
 
 #define DEFAULT_HOST "localhost"

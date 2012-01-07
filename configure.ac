@@ -15,6 +15,12 @@ PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.4],,
 AC_SUBST(LIBCONFIG_CFLAGS)
 AC_SUBST(LIBCONFIG_LIBS)
 
+PKG_CHECK_MODULES([LIBNFQUEUE], [libnetfilter_queue >= 1.0],,
+	AC_MSG_ERROR([libnetfilter_queue 1.0 or newer not found.])
+)
+AC_SUBST(LIBNFQUEUE_CFLAGS)
+AC_SUBST(LIBNFQUEUE_LIBS)
+
 AC_CONFIG_FILES([Makefile])
 AC_DEFINE_UNQUOTED(CONFFILE, "$sysconfdir/nfdnsbl.conf", [Config file path])
 AC_OUTPUT
