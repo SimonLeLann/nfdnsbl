@@ -38,8 +38,11 @@ void log_debug(int level, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 #ifndef ENABLE_SYSLOG
-        vfprintf(stdout,fmt,args);
-	fprintf(stdout,"\n");
+	if(!option.daemonize) //stdout is closed
+	{
+        	vfprintf(stdout,fmt,args);
+		fprintf(stdout,"\n");
+	}
 #else
 	switch(level){
 		case 0:
@@ -204,7 +207,51 @@ static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struc
 
 #define BUFSIZE 256
 
-int main()
+void daemonize(void)
+{
+	pid_t pid, sid;
+
+	/* Fork off the parent process */
+	pid = fork();
+	if (pid < 0) {
+		exit(EXIT_FAILURE);
+	}
+
+	/* If we got a good PID, then
+	 * we can exit the parent process. 
+	 */
+	if (pid > 0) {
+		exit(EXIT_SUCCESS);
+	}
+
+	/* Change the file mode mask */
+	umask(0);
+
+#ifdef ENABLE_SYSLOG
+	openlog(PACKAGE_NAME,LOG_PID,LOG_DAEMON);
+#endif
+	
+	/* Create a new SID for the child process */
+	sid = setsid();
+	if (sid < 0) {
+		log_debug(1,"Unable to start, setsid failed!");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Change the current working directory */
+	if ((chdir("/")) < 0) {
+		log_debug(1,"Unable to start, chdir failed!");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Close out the standard file descriptors */
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+}
+
+int main(void)
 {
 	struct nfq_handle *h;
 	struct nfq_q_handle *handle;
@@ -213,14 +260,13 @@ int main()
 	char buf[BUFSIZE];
 	struct stat fbuf;
 
-#ifdef ENABLE_SYSLOG
-	openlog(PACKAGE_NAME,LOG_PID,LOG_DAEMON);
-#endif
-
-
 	init_option(&option);
 	atexit(exit_callback);
 	read_config(&option,CONFFILE);
+
+	if(option.daemonize)
+		daemonize();
+
 	print_option(&option);
 
 	if (stat("/proc/net/netfilter/nfnetlink_queue", &fbuf) == ENOENT) {

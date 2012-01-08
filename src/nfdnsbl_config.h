@@ -10,6 +10,7 @@ typedef struct option_t
 	int queue; //queue to listen to
 	char* dnsbl; // Address of the dnsbl
 	int debug; // Debug level. the lower, the quieter.
+	int daemonize;
 } option_t;
 
 

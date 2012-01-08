@@ -35,6 +35,7 @@ int read_config(option_t* options,const char* config_file)
 	config_lookup_int(&config, "options.reject_mark", &(options->reject_mark));
 	config_lookup_int(&config, "options.queue", &(options->queue));
 	config_lookup_int(&config, "options.debug", &(options->debug));
+	config_lookup_int(&config, "options.daemonize", &(options->daemonize));
 	config_lookup_string(&config, "options.dnsbl", (const char**)&(options->dnsbl));
 
 	config_destroy(&config);
@@ -58,6 +59,7 @@ void init_option(option_t* option)
 	option->reject_mark = 0;
 	option->queue = 0;
 	option->debug = 0;
+	option->daemonize = 0;
 }
 
 void destroy_option(option_t* option)
@@ -76,12 +78,14 @@ void print_option(option_t* option)
 		reject_mark: %u\n\
 		queue: %u\n\
 		dnsbl: %s\n\
-		debug: %d\n",
+		debug: %d\n\
+		daemonize: %d\n",
 		option->accept_verdict,
 		option->reject_verdict,
 		option->accept_mark,
 		option->reject_mark,
 		option->queue,
 		option->dnsbl,
-		option->debug);
+		option->debug,
+		option->daemonize);
 }
