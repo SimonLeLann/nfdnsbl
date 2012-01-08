@@ -28,6 +28,11 @@ AS_IF([test "x$enable_syslog" = "xyes"], [
   AC_DEFINE(ENABLE_SYSLOG, 1, [Enable syslog])
 ])
 
+AC_ARG_ENABLE([cache], AS_HELP_STRING([--enable-cache], [Enable ip caching]))
+
+AS_IF([test "x$enable_cache" = "xyes"], [
+  AC_DEFINE(ENABLE_CACHE, 1, [Enable ip caching])
+])
 
 AC_CONFIG_FILES([Makefile])
 AC_DEFINE_UNQUOTED(CONFFILE, "$sysconfdir/nfdnsbl.conf", [Config file path])

@@ -17,9 +17,25 @@
 #include <syslog.h>
 #endif
 
+#ifdef ENABLE_CACHE
+#include "uthash.h"
+#endif
+
 extern int h_errno;
 
 option_t option;
+
+#ifdef ENABLE_CACHE
+struct ip_cache_entry
+{
+	char* ip;		/* key (structure POINTS TO string */
+	char verdict;
+	UT_hash_handle hh;	/* makes this structure hashable */
+};
+
+struct ip_cache_entry* ip_cache;
+
+#endif
 
 void exit_callback(void)
 {
@@ -128,42 +144,122 @@ void reverse_ip4(char* ip_addr,char* dest)
 	}
 }
 
-char make_decision(char* ip_addr)
+#ifdef ENABLE_CACHE
+void init_cache(void)
 {
-	char* dns;
+	ip_cache = NULL;
+}
+
+void destroy_cache(void)
+{
+	log_debug(2,"Deleting all cache entries.");
+	struct ip_cache_entry* current,*tmp;
+
+	HASH_ITER(hh, ip_cache, current, tmp)
+	{
+		HASH_DEL(ip_cache,current);
+		log_debug(3,"Deleting %s with verdict %d from cache.",current->ip,current->verdict);
+		free(current->ip);
+		free(current);
+	}
+}
+
+char find_in_cache(char *key)
+{
+	struct ip_cache_entry* entry;
+	HASH_FIND_STR(ip_cache, key, entry);
+	if (entry) 
+	{
+		// remove it (so the subsequent add will throw it on the front of the list)
+		HASH_DELETE(hh, ip_cache, entry);
+		HASH_ADD_KEYPTR(hh, ip_cache, entry->ip, strlen(entry->ip), entry);
+		log_debug(2,"Retrieved %s with verdict %d from cache.",entry->ip,entry->verdict);
+		return entry->verdict;
+	}
+	return -1;
+}
+
+#define MAX_CACHE_SIZE 1000
+
+void add_to_cache(char *ip, char verdict)
+{
+	struct ip_cache_entry* entry, *tmp;
+
+	entry = malloc(sizeof(struct ip_cache_entry));
+	entry->ip = strdup(ip);
+	entry->verdict = verdict;
+	HASH_ADD_KEYPTR(hh, ip_cache, entry->ip, strlen(entry->ip), entry);
+
+	// prune the cache to MAX_CACHE_SIZE
+	if (HASH_COUNT(ip_cache) >= MAX_CACHE_SIZE) {
+		HASH_ITER(hh, ip_cache, entry, tmp) 
+		{
+			HASH_DELETE(hh, ip_cache, entry);
+		        free(entry->ip);
+			free(entry);
+			break;
+		}
+	}
+}
+#endif
+
+int resolv4(char* ip_addr)
+{
+	char* dns, *tmp;
 	int addr_len, dnsbl_len;
 	struct hostent *host;
+	char verdict;
+
+	tmp = strdup(ip_addr);
+
+#ifdef ENABLE_CACHE
+	if((verdict = find_in_cache(ip_addr)) == -1)
+	{
+#endif
+
+	addr_len = strlen(tmp);
+	dnsbl_len = strlen(option.dnsbl);
+
+	dns = (char*)malloc(addr_len+dnsbl_len+2);
+	reverse_ip4(tmp,dns);
+	free(tmp);
+	dns[addr_len] = '.';
+	memcpy(dns+addr_len+1,option.dnsbl,dnsbl_len);
+	dns[addr_len+dnsbl_len+1] = '\0';
+	log_debug(2,"Resolving %s",dns);
+	host = gethostbyname(dns);
+
+	if (host == NULL) {
+		if (h_errno != HOST_NOT_FOUND) {
+			log_debug(1, "Error looking up host %s",
+				dns);
+			verdict =  0;
+		}
+		log_debug(2, "Host %s is clean",dns);
+		verdict =  1;
+	}
+	else
+	{
+		log_debug(2, "Host %s is in blacklist",dns);
+		verdict =  0;
+	}
+#ifdef ENABLE_CACHE
+	add_to_cache(ip_addr,verdict);
+	}
+#endif
+	return verdict;
+}
+
+char make_decision(char* ip_addr)
+{
 
 	if(!ip_addr) //Something is wrong, paranoia is good
 		return 0;
 	
-	addr_len = strlen(ip_addr);
-	dnsbl_len = strlen(option.dnsbl);
 	
 	if(strchr(ip_addr,'.')) //IPv4
 	{
-		dns = (char*)malloc(addr_len+dnsbl_len+2);
-		reverse_ip4(ip_addr,dns);
-		dns[addr_len] = '.';
-		memcpy(dns+addr_len+1,option.dnsbl,dnsbl_len);
-		dns[addr_len+dnsbl_len+1] = '\0';
-		log_debug(2,"Resolving %s",dns);
-		host = gethostbyname(dns);
-
-		if (host == NULL) {
-			if (h_errno != HOST_NOT_FOUND) {
-				log_debug(1, "Error looking up host %s",
-					dns);
-				return 0;
-			}
-			log_debug(2, "Host %s is clean",dns);
-			return 1;
-		}
-		else
-		{
-			log_debug(2, "Host %s is in blacklist",dns);
-			return 0;
-		}
+		return resolv4(ip_addr);
 	}
 	else	// IPv6
 	{	
@@ -300,7 +396,11 @@ int main(void)
 		log_debug(1, "nfq_set_mode failed");
 		exit(EXIT_FAILURE);
 	}
-	log_debug(0,"%s started successfully",PACKAGE_STRING);
+	log_debug(0,"%s started successfully. Debug level is %d.",PACKAGE_STRING,option.debug);
+
+#ifdef ENABLE_CACHE
+	init_cache();
+#endif
 	
 	/* main packet processing loop.  This loop should never terminate
 	 * unless a signal is received or some other unforeseen thing
@@ -321,6 +421,9 @@ int main(void)
  	log_debug(2,"NFQUEUE: unbinding from queue '%hd'\n", option.queue);
 	nfq_destroy_queue(handle);
 	nfq_close(h);
+#ifdef ENABLE_CACHE
+	destroy_cache();
+#endif
 	return EXIT_SUCCESS;
 }
 
