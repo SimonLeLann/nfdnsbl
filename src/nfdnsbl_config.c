@@ -34,6 +34,7 @@ int read_config(option_t* options,const char* config_file)
 	config_lookup_int(&config, "options.accept_mark", &(options->accept_mark));
 	config_lookup_int(&config, "options.reject_mark", &(options->reject_mark));
 	config_lookup_int(&config, "options.queue", &(options->queue));
+	config_lookup_int(&config, "options.debug", &(options->debug));
 	config_lookup_string(&config, "options.dnsbl", (const char**)&(options->dnsbl));
 
 	config_destroy(&config);
@@ -56,6 +57,7 @@ void init_option(option_t* option)
 	option->accept_mark = 0;
 	option->reject_mark = 0;
 	option->queue = 0;
+	option->debug = 0;
 }
 
 void destroy_option(option_t* option)
@@ -63,9 +65,11 @@ void destroy_option(option_t* option)
 	free(option->dnsbl);
 }
 
+extern log_debug(int,char*,...);
+
 void print_option(option_t* option)
 {
-	fprintf(stdout,"Options:\n\
+	log_debug(2,"Options:\n\
 		accept_verdict: %u\n\
 		reject_verdict: %u\n\
 		accept_mark: %u\n\

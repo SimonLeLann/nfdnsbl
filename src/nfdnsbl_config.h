@@ -9,6 +9,7 @@ typedef struct option_t
 	int reject_mark; //mark to set when not ok
 	int queue; //queue to listen to
 	char* dnsbl; // Address of the dnsbl
+	int debug; // Debug level. the lower, the quieter.
 } option_t;
 
 

@@ -24,6 +24,8 @@ void exit_callback(void)
 
 void log_debug(int level, const char* fmt, ...)
 {
+	if(option.debug < level)
+		return;
 	va_list args;
 	va_start(args,fmt);
         vfprintf(stdout,fmt,args);
