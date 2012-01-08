@@ -347,7 +347,7 @@ void daemonize(void)
 
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
 	struct nfq_handle *h;
 	struct nfq_q_handle *handle;
@@ -358,7 +358,7 @@ int main(void)
 
 	init_option(&option);
 	atexit(exit_callback);
-	read_config(&option,CONFFILE);
+	read_config(&option,(argc==2)?argv[1]:CONFFILE);
 
 	if(option.daemonize)
 		daemonize();
