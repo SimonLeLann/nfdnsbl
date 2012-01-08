@@ -11,6 +11,9 @@
 #include <netinet/in.h>
 #include <linux/netfilter.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
+#include <netdb.h>
+
+extern int h_errno;
 
 option_t option;
 
@@ -73,18 +76,72 @@ int set_verdict(struct nfq_q_handle * qh, unsigned int id, char verdict)
 	}
 	else
 	{
-		return nfq_set_verdict2( qh, id, option.reject_verdict, option.reject_mark,0,NULL);
 		log_debug(2,"Packet rejected!");
+		return nfq_set_verdict2( qh, id, option.reject_verdict, option.reject_mark,0,NULL);
 	}
 }
 
-char make_decision(const char* ip_addr)
+void reverse_ip4(char* ip_addr,char* dest)
 {
+	char* b[4];
+	char* saveptr;
+	int i;
+
+	for(i = 0; i < 4; i++)
+	{
+		b[i] = strtok_r(ip_addr,".",&saveptr);
+		ip_addr = NULL;
+	}
+	dest[0] = '\0';
+	for(i = 3; i >= 0; i--)
+	{
+		strcat(dest,b[i]);
+		strcat(dest,".");
+	}
+}
+
+char make_decision(char* ip_addr)
+{
+	char* dns;
+	int addr_len, dnsbl_len;
+	struct hostent *host;
+
 	if(!ip_addr) //Something is wrong, paranoia is good
 		return 0;
-	if(!strcmp(ip_addr,"127.0.0.1"))
-		return 1;
+	
+	addr_len = strlen(ip_addr);
+	dnsbl_len = strlen(option.dnsbl);
+	
+	if(strchr(ip_addr,'.')) //IPv4
+	{
+		dns = (char*)malloc(addr_len+dnsbl_len+2);
+		reverse_ip4(ip_addr,dns);
+		dns[addr_len] = '.';
+		memcpy(dns+addr_len+1,option.dnsbl,dnsbl_len);
+		dns[addr_len+dnsbl_len+1] = '\0';
+		log_debug(2,"Resolving %s",dns);
+		host = gethostbyname(dns);
 
+		if (host == NULL) {
+			if (h_errno != HOST_NOT_FOUND) {
+				log_debug(1, "Error looking up host %s",
+					dns);
+				return 0;
+			}
+			log_debug(2, "Host %s is clean",dns);
+			return 1;
+		}
+		else
+		{
+			log_debug(2, "Host %s is in blacklist",dns);
+			return 0;
+		}
+	}
+	else	// IPv6
+	{	
+		return 1;
+	}
+	
 	log_debug(2,"No decision taken, reject by default!");
 	return 0;
 }
