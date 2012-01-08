@@ -64,12 +64,43 @@ const char* extract_ip(const char* payload,int size)
 		return NULL;
 }
 
+int set_verdict(struct nfq_q_handle * qh, unsigned int id, char verdict)
+{
+	if(verdict) // Packet is ok
+	{
+		log_debug(2,"Packet accepted!");
+		return nfq_set_verdict2( qh, id, option.accept_verdict, option.accept_mark,0,NULL);
+	}
+	else
+	{
+		return nfq_set_verdict2( qh, id, option.reject_verdict, option.reject_mark,0,NULL);
+		log_debug(2,"Packet rejected!");
+	}
+}
+
+char make_decision(const char* ip_addr)
+{
+	if(!ip_addr) //Something is wrong, paranoia is good
+		return 0;
+	if(!strcmp(ip_addr,"127.0.0.1"))
+		return 1;
+
+	log_debug(2,"No decision taken, reject by default!");
+	return 0;
+}
+
 static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struct nfq_data *nfa, void *data) 
 {
 	int ret;
 	struct nfqnl_msg_packet_hdr *ph;
 	unsigned char *nfdata;
 	char* ip_addr;
+	unsigned int id;
+	char verdict;
+
+	if (ph = nfq_get_msg_packet_hdr(nfa)) {
+		id = ntohl(ph->packet_id);
+	}
 
 	log_debug(2,"Entering packet_callback");
 
@@ -80,7 +111,12 @@ static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struc
 		log_debug(1,"Unable to decode ip address!");
 
 	log_debug(2,"Received a packet from %s.",ip_addr);
+
+	verdict = make_decision(ip_addr);
+
 	free(ip_addr);
+
+	return set_verdict(qh,id,verdict);
 
 }
 
