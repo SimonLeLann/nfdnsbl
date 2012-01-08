@@ -21,6 +21,12 @@ PKG_CHECK_MODULES([LIBNFQUEUE], [libnetfilter_queue >= 1.0],,
 AC_SUBST(LIBNFQUEUE_CFLAGS)
 AC_SUBST(LIBNFQUEUE_LIBS)
 
+PKG_CHECK_MODULES([LIBBSD], [libbsd >= 0.2],,
+	AC_MSG_ERROR([libbsd 0.2 or newer not found.])
+)
+AC_SUBST(LIBBSD_CFLAGS)
+AC_SUBST(LIBBSD_LIBS)
+
 AC_ARG_ENABLE([syslog], AS_HELP_STRING([--enable-syslog], [Enable syslog logging]))
 
 AS_IF([test "x$enable_syslog" = "xyes"], [

@@ -12,6 +12,8 @@
 #include <linux/netfilter.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <netdb.h>
+#include <sys/param.h>
+#include <libutil.h>
 
 #ifdef ENABLE_SYSLOG
 #include <syslog.h>
@@ -303,14 +305,26 @@ static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struc
 
 #define BUFSIZE 256
 
-void daemonize(void)
+void daemonize(char* pidfile)
 {
-	pid_t pid, sid;
+	pid_t pid, sid, otherpid;
+	struct pidfh *pfh;
 
+	pfh = pidfile_open((pidfile==NULL)?"/var/run/nfdnsbl.pid":pidfile, 0600, &otherpid);
+	if (pfh == NULL) {
+	        if (errno == EEXIST) {
+			log_debug(0,"Daemon already running, pid: %jd.",
+				(intmax_t)otherpid);
+			exit(EXIT_FAILURE);
+		}
+		/* If we cannot create pidfile from other reasons, only warn. */
+		log_debug(0,"Cannot open or create pidfile");
+	}
 	/* Fork off the parent process */
 	pid = fork();
 	if (pid < 0) {
 		exit(EXIT_FAILURE);
+		pidfile_remove(pfh);
 	}
 
 	/* If we got a good PID, then
@@ -318,6 +332,7 @@ void daemonize(void)
 	 */
 	if (pid > 0) {
 		exit(EXIT_SUCCESS);
+		pidfile_close(pfh);
 	}
 
 	/* Change the file mode mask */
@@ -331,15 +346,17 @@ void daemonize(void)
 	sid = setsid();
 	if (sid < 0) {
 		log_debug(1,"Unable to start, setsid failed!");
+		pidfile_remove(pfh);
 		exit(EXIT_FAILURE);
 	}
 
 	/* Change the current working directory */
 	if ((chdir("/")) < 0) {
 		log_debug(1,"Unable to start, chdir failed!");
+		pidfile_remove(pfh);
 		exit(EXIT_FAILURE);
 	}
-
+	pidfile_write(pfh);
 	/* Close out the standard file descriptors */
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
@@ -358,10 +375,10 @@ int main(int argc, char** argv)
 
 	init_option(&option);
 	atexit(exit_callback);
-	read_config(&option,(argc==2)?argv[1]:CONFFILE);
+	read_config(&option,(argc>=2)?argv[1]:CONFFILE);
 
 	if(option.daemonize)
-		daemonize();
+		daemonize((argc>=3)?argv[2]:NULL);
 
 	print_option(&option);
 
