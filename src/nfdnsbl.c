@@ -13,6 +13,10 @@
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <netdb.h>
 
+#ifdef ENABLE_SYSLOG
+#include <syslog.h>
+#endif
+
 extern int h_errno;
 
 option_t option;
@@ -20,16 +24,35 @@ option_t option;
 void exit_callback(void)
 {
 	destroy_option(&option);
+
+#ifdef ENABLE_SYSLOG
+	closelog();
+#endif
 }
 
 void log_debug(int level, const char* fmt, ...)
 {
+	int priority;
 	if(option.debug < level)
 		return;
 	va_list args;
 	va_start(args,fmt);
+#ifndef ENABLE_SYSLOG
         vfprintf(stdout,fmt,args);
 	fprintf(stdout,"\n");
+#else
+	switch(level){
+		case 0:
+			priority = LOG_INFO;
+			break;
+		case 1:
+			priority = LOG_ERR;
+			break;
+		default:
+			priority = LOG_DEBUG;
+	}
+	vsyslog(priority,fmt,args);
+#endif
 	va_end(args);
 }
 
@@ -189,6 +212,10 @@ int main()
 	int fd, rv;
 	char buf[BUFSIZE];
 	struct stat fbuf;
+
+#ifdef ENABLE_SYSLOG
+	openlog(PACKAGE_NAME,LOG_PID,LOG_DAEMON);
+#endif
 
 
 	init_option(&option);

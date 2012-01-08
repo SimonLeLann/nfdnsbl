@@ -75,11 +75,13 @@ void print_option(option_t* option)
 		accept_mark: %u\n\
 		reject_mark: %u\n\
 		queue: %u\n\
-		dnsbl: %s\n",
+		dnsbl: %s\n\
+		debug: %d\n",
 		option->accept_verdict,
 		option->reject_verdict,
 		option->accept_mark,
 		option->reject_mark,
 		option->queue,
-		option->dnsbl);
+		option->dnsbl,
+		option->debug);
 }
