@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -27,7 +28,60 @@ void log_debug(int level, const char* fmt, ...)
 	va_end(args);
 }
 
-static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struct nfq_data *nfa, void *data) {
+const char* extract_ip(const char* payload,int size)
+{
+	unsigned char ip[16];
+	int version;
+	char* ret;
+
+	if(size < 1)
+	{
+		log_debug(1,"Can't read IP version! size: %d",size);
+		return NULL;
+	}
+
+	version = payload[0] & 0xF0;
+	version >>= 4;
+
+	if(size < ((version==4)?16:24))
+	{
+		log_debug(1,"Packet too short for IPv%d! size=%d",version,size);
+		return NULL;
+	}
+	if(version == 4)
+	{
+		memcpy(ip,payload+12,4);
+		ret = (char*)malloc(INET_ADDRSTRLEN);
+		return inet_ntop(AF_INET,(struct in_addr*)ip,ret,INET_ADDRSTRLEN);
+	}
+	else if(version == 6)
+	{
+		memcpy(ip,payload+8,16);
+		ret = (char*)malloc(INET6_ADDRSTRLEN);
+		return inet_ntop(AF_INET6,(struct in6_addr*)ip,ret,INET6_ADDRSTRLEN);
+	}
+	else
+		return NULL;
+}
+
+static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struct nfq_data *nfa, void *data) 
+{
+	int ret;
+	struct nfqnl_msg_packet_hdr *ph;
+	unsigned char *nfdata;
+	char* ip_addr;
+
+	log_debug(2,"Entering packet_callback");
+
+	if((ret = nfq_get_payload(nfa, &nfdata)) == -1)
+		log_debug(1,"Error while retrieving payload.");
+
+	if((ip_addr = extract_ip(nfdata,ret)) == NULL)
+		log_debug(1,"Unable to decode ip address!");
+
+	log_debug(2,"Received a packet from %s.",ip_addr);
+	free(ip_addr);
+
 }
 
 #define BUFSIZE 256
@@ -58,12 +112,12 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	log_debug(2, "unbinding nfq handle...");
-	if (nfq_unbind_pf(h, AF_INET) < 0) {
+	if (nfq_unbind_pf(h, AF_INET6) < 0) {
 		log_debug(1, "Couldn't unbind nf_queue handler for AF_INET");
 		exit(EXIT_FAILURE);
 	}
 	log_debug(2, "binding nfq handle...");
-	if (nfq_bind_pf(h, AF_INET) < 0) {
+	if (nfq_bind_pf(h, AF_INET6) < 0) {
 		log_debug(1, "Couldn't bind ns_queue handler for AF_INET");
 		exit(EXIT_FAILURE);
 	}
@@ -73,7 +127,7 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 	log_debug(2, "setting nfq mode");
-	if(nfq_set_mode(handle,NFQNL_COPY_META,0) == -1)
+	if(nfq_set_mode(handle,NFQNL_COPY_PACKET,24) == -1)
 	{
 		log_debug(1, "nfq_set_mode failed");
 		exit(EXIT_FAILURE);
