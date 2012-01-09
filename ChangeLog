@@ -1,0 +1,14 @@
+0b7381e Pidfile creation.
+0acb610 Changed default config.
+1889711 We now take the conf filename as an argument.
+2bbb1f8 Cache support. Added default config file.
+37d06f0 We can now become a daemon.
+cf2b355 Ajout du support de syslog.
+98abcc2 Added proper debug levels.
+8efb766 Added resolv. First working version!!
+a099142 Now setting verdict!
+c2b73ff Added IPv4 and IPv6 address extraction.
+3178101 NFQUEUE connection
+14678a4 Placed option_destroy in atexit
+442d031 Added configuration.
+2e32efd Initial commit, nothing to see!
