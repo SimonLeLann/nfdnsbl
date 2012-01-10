@@ -255,8 +255,8 @@ int resolv4(char* ip_addr)
 char make_decision(char* ip_addr)
 {
 
-	if(!ip_addr) //Something is wrong, paranoia is good
-		return 0;
+	if(!ip_addr) //Something is wrong? Are we paranoiac?
+		return !option.paranoid;
 	
 	
 	if(strchr(ip_addr,'.')) //IPv4
@@ -267,9 +267,6 @@ char make_decision(char* ip_addr)
 	{	
 		return 1;
 	}
-	
-	log_debug(2,"No decision taken, reject by default!");
-	return 0;
 }
 
 static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,struct nfq_data *nfa, void *data) 
