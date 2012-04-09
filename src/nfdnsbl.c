@@ -77,7 +77,7 @@ void log_debug(int level, const char* fmt, ...)
 	va_end(args);
 }
 
-const char* extract_ip(const char* payload,int size)
+char* extract_ip(const char* payload,int size)
 {
 	unsigned char ip[16];
 	int version;
@@ -101,13 +101,32 @@ const char* extract_ip(const char* payload,int size)
 	{
 		memcpy(ip,payload+12,4);
 		ret = (char*)malloc(INET_ADDRSTRLEN);
-		return inet_ntop(AF_INET,(struct in_addr*)ip,ret,INET_ADDRSTRLEN);
+		if(inet_ntop(AF_INET,(const void*)ip,ret,INET_ADDRSTRLEN))
+		{
+                        return ret;
+		}
+		else
+		{
+                        log_debug(1,"extract_ip: unable to convert ip: %s", strerror(errno));
+                        free(ret);
+			return NULL;
+		}
+
 	}
 	else if(version == 6)
 	{
 		memcpy(ip,payload+8,16);
 		ret = (char*)malloc(INET6_ADDRSTRLEN);
-		return inet_ntop(AF_INET6,(struct in6_addr*)ip,ret,INET6_ADDRSTRLEN);
+		if(inet_ntop(AF_INET6,(const void*)ip,ret,INET6_ADDRSTRLEN))
+		{
+                        return ret;
+		}
+		else
+		{
+                        log_debug(1,"extract_ip: unable to convert ip6: %s", strerror(errno));
+                        free(ret);
+			return NULL;
+		}
 	}
 	else
 		return NULL;
@@ -166,7 +185,7 @@ void destroy_cache(void)
 	}
 }
 
-char find_in_cache(char *key)
+char find_in_cache(const char *key)
 {
 	struct ip_cache_entry* entry;
 	HASH_FIND_STR(ip_cache, key, entry);
@@ -183,7 +202,7 @@ char find_in_cache(char *key)
 
 #define MAX_CACHE_SIZE 1000
 
-void add_to_cache(char *ip, char verdict)
+void add_to_cache(const char *ip, char verdict)
 {
 	struct ip_cache_entry* entry, *tmp;
 
@@ -205,7 +224,7 @@ void add_to_cache(char *ip, char verdict)
 }
 #endif
 
-int resolv4(char* ip_addr)
+int resolv4(const char* ip_addr)
 {
 	char* dns, *tmp;
 	int addr_len, dnsbl_len;
@@ -252,7 +271,7 @@ int resolv4(char* ip_addr)
 	return verdict;
 }
 
-char make_decision(char* ip_addr)
+char make_decision(const char* ip_addr)
 {
 
 	if(!ip_addr) //Something is wrong? Are we paranoiac?
