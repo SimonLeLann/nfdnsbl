@@ -13,7 +13,7 @@
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <netdb.h>
 #include <sys/param.h>
-#include <libutil.h>
+#include <bsd/libutil.h>
 
 #ifdef ENABLE_SYSLOG
 #include <syslog.h>
