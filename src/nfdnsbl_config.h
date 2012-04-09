@@ -12,6 +12,8 @@ typedef struct option_t
 	int debug; // Debug level. the lower, the quieter.
 	int daemonize; // Shall we daemonize?
 	int paranoid; // Policy when we get errors
+	int gid;
+	int uid;
 } option_t;
 
 

@@ -412,6 +412,20 @@ int main(int argc, char** argv)
 	}
 	log_debug(0,"%s started successfully. Debug level is %d.",PACKAGE_STRING,option.debug);
 
+	if (getuid() == 0) {
+	        /* process is running as root, drop privileges */
+	        if (setgid(option.gid) != 0)
+		{
+		        log_debug(1,"setgid: Unable to drop group privileges: %s", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		if (setuid(option.uid) != 0)
+		{
+		        log_debug(1,"setuid: Unable to drop user privileges: %S", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+	}
+
 #ifdef ENABLE_CACHE
 	init_cache();
 #endif
