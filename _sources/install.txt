@@ -1,0 +1,20 @@
+Installation
+============
+
+NFDNSBL is available at `git://git.dosadi.fr/nfdnsbl.git` or on the `download page <download/>`_.
+
+Manual installation
+-------------------
+
+NFDNSBL use autotool, hence installation is simple (You will need autotool).
+
+.. parsed-literal::
+    $ autoreconf --force --install
+    $ ./configure --enable-syslog --enable-cache
+    $ make
+    $ make install
+
+Gentoo ebuild
+-------------
+
+An ebuild is available `here <download/nfdnsbl-ebuild.tar.bz2>`_, it include an init script.

@@ -1,0 +1,172 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Configuration &mdash; NFDNSBL v documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="NFDNSBL v documentation" href="index.html" />
+    <link rel="prev" title="Installation" href="install.html" />
+     
+	<script type="text/javascript">
+
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-28577125-1']);
+		_gaq.push(['_setDomainName', 'dosadi.fr']);
+		_gaq.push(['_setAllowLinker', true]);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+			var ga = document.createElement('script'); 
+ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol 
+? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = 
+document.getElementsByTagName('script')[0]; 
+s.parentNode.insertBefore(ga, s);
+		})();
+
+	</script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="install.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">NFDNSBL v documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="config-file">
+<h2>Config file<a class="headerlink" href="#config-file" title="Permalink to this headline">¶</a></h2>
+<p>The config file is usually located in <tt class="docutils literal"><span class="pre">/etc/nfdnsbl.conf</span></tt>, here is a sample</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Gentoo users who used the ebuild will also find <tt class="docutils literal"><span class="pre">/etc/nfdnsbl/</span></tt>, the init script will use the config file
+<tt class="docutils literal"><span class="pre">/etc/nfdnsbl/custom.conf</span></tt> if started as <tt class="docutils literal"><span class="pre">/etc/init.d/nfdnsbl.custom</span></tt> (use symlinks!).</p>
+</div>
+<div class="highlight-python"><pre>options: {
+#       accept_verdict = 1; # interesting verdicts are 0(NF_DROP),1(NF_ACCEPT),4(NF_REPEAT)
+#       reject_verdict = 0;
+#       reject_mark = 0; #mark to set to the packet, interesting with NF_REPEAT
+#       accept_mark = 0;
+#       queue = 1; #Queue number to use
+        debug = 1; #-1 for no messages, 3 for all messages, 1 is a good choice
+        daemonize = 1; #Set to 1 to become a daemon, 0 otherwise
+}</pre>
+</div>
+</div>
+<div class="section" id="iptable-configuration">
+<h2>IPTable configuration<a class="headerlink" href="#iptable-configuration" title="Permalink to this headline">¶</a></h2>
+<p>In order to use NFDNSBL, you need to redirect the packets you want to filter to a queue.</p>
+<div class="highlight-python"><pre>$ iptables -A INPUT -j NFQUEUE --queue-num 1</pre>
+</div>
+<p>Note that once a packet in a queue has been accepted, it don&#8217;t continue thru the chain. Hence if you want additionnal
+filtering, you will need to put that rule last or use NF_REPEAT and packet marking.</p>
+<p>For example, with accept_verdict=4 and accept_mark=1.</p>
+<div class="highlight-python"><pre>$ iptables -A INPUT -m mark ! --mark 1 -j NFQUEUE --queue-num 1</pre>
+</div>
+<p>The packet will then start again the whole iptable chain and the mark will prevent it to go again to the queue.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Going to userspace from kernelspace is a costly operation and DNS resolving is costlier, even with caching. You may want to add a rule to only check the
+first packet of a connection by adding
+<tt class="docutils literal"><span class="pre">$</span> <span class="pre">iptables</span> <span class="pre">-A</span> <span class="pre">INPUT</span> <span class="pre">-m</span> <span class="pre">state</span> <span class="pre">--state</span> <span class="pre">ESTABLISHED</span> <span class="pre">-j</span> <span class="pre">ACCEPT</span></tt>
+before sending the packet to NFDNSBL. Anyway it is generally a good rule to put first.</p>
+</div>
+</div>
+<div class="section" id="executable-arguments">
+<h2>Executable arguments<a class="headerlink" href="#executable-arguments" title="Permalink to this headline">¶</a></h2>
+<p>NFDNSBL takes two optional arguments, the config file path and the pidfile path. The config file path must be supplied first and the pidfile path second.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Configuration</a><ul>
+<li><a class="reference internal" href="#config-file">Config file</a></li>
+<li><a class="reference internal" href="#iptable-configuration">IPTable configuration</a></li>
+<li><a class="reference internal" href="#executable-arguments">Executable arguments</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="install.html"
+                        title="previous chapter">Installation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/config.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="install.html" title="Installation"
+             >previous</a> |</li>
+        <li><a href="index.html">NFDNSBL v documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Simon Le Lann.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

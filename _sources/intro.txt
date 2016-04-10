@@ -1,0 +1,16 @@
+Introduction
+============
+
+This is the documentation of NFDNSBL, a NF_QUEUE client that can check any DNSBL and act accordingly.
+
+What is a DNSBL?
+----------------
+
+In a nutshell, a DNSBL is way to publish blacklists.
+See http://en.wikipedia.org/wiki/DNSBL for more informations.
+
+How does it work?
+-----------------
+
+We simply redirect packets to a queue in userspace (target NFQUEUE) using iptable. NFDNSBL then get these packets, extract the source IP address, query a dnsbl server
+and act. It can accept the packet, drop it or mark it and reinject it in iptable.

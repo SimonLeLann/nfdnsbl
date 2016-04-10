@@ -1,0 +1,28 @@
+.. NFDNSBL documentation master file, created by
+   sphinx-quickstart on Sun Jan  8 23:06:15 2012.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+
+Welcome to NFDNSBL project page!
+================================
+
+NFDNSBL is a daemon that filters incoming packet using IPTable and any blacklist distributed with DNSBL. It is still in early stage of development but already fully functionnal with syslog and LRU caching, just don't use it in a production environment (or at least not on something important). For any bug or feature request, feel free to contact me at `simon.le-lann@dosadi.fr <mailto:simon.le-lann@dosadi.fr>`_.
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+   intro
+   install
+   config
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+

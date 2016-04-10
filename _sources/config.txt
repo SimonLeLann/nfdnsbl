@@ -1,0 +1,54 @@
+Configuration
+=============
+
+Config file
+-----------
+
+The config file is usually located in ``/etc/nfdnsbl.conf``, here is a sample
+
+.. NOTE::
+   Gentoo users who used the ebuild will also find ``/etc/nfdnsbl/``, the init script will use the config file
+   ``/etc/nfdnsbl/custom.conf`` if started as ``/etc/init.d/nfdnsbl.custom`` (use symlinks!).
+..
+..
+
+.. parsed-literal::
+    options: {
+    #       accept_verdict = 1; # interesting verdicts are 0(NF_DROP),1(NF_ACCEPT),4(NF_REPEAT)
+    #       reject_verdict = 0;
+    #       reject_mark = 0; #mark to set to the packet, interesting with NF_REPEAT
+    #       accept_mark = 0;
+    #       queue = 1; #Queue number to use
+            debug = 1; #-1 for no messages, 3 for all messages, 1 is a good choice
+            daemonize = 1; #Set to 1 to become a daemon, 0 otherwise
+    }
+
+IPTable configuration
+---------------------
+
+In order to use NFDNSBL, you need to redirect the packets you want to filter to a queue.
+
+.. parsed-literal::
+    $ iptables -A INPUT -j NFQUEUE --queue-num 1
+
+Note that once a packet in a queue has been accepted, it don't continue thru the chain. Hence if you want additionnal
+filtering, you will need to put that rule last or use NF_REPEAT and packet marking.
+
+For example, with accept_verdict=4 and accept_mark=1.
+
+.. parsed-literal::
+   $ iptables -A INPUT -m mark ! --mark 1 -j NFQUEUE --queue-num 1
+
+The packet will then start again the whole iptable chain and the mark will prevent it to go again to the queue.
+
+.. NOTE::
+   Going to userspace from kernelspace is a costly operation and DNS resolving is costlier, even with caching. You may want to add a rule to only check the
+   first packet of a connection by adding
+   ``$ iptables -A INPUT -m state --state ESTABLISHED -j ACCEPT``
+   before sending the packet to NFDNSBL. Anyway it is generally a good rule to put first.
+
+ 
+Executable arguments
+--------------------
+
+NFDNSBL takes two optional arguments, the config file path and the pidfile path. The config file path must be supplied first and the pidfile path second.
